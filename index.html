@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>VCard Test</title>
+	</head>
+	<body>
+		<script type="module">
+			import {VCard} from "./vcard.js";
+			
+			(async ()=>{
+
+				const download = (text) => {
+					var element = document.createElement('a');
+					element.setAttribute('href', 'data:text/x-vcard;charset=utf-8,' + encodeURIComponent(text));
+					element.setAttribute('download', 'vcard.vcf');
+					element.style.display = 'none';
+					document.body.appendChild(element);
+					element.click();
+					document.body.removeChild(element);
+				}
+
+				async function imgToDataURI(src) {
+					return new Promise(done=>{
+						var image = new Image();
+						image.crossOrigin = 'Anonymous';
+						image.onload = () => {
+							var canvas = document.createElement('canvas');
+							var context = canvas.getContext('2d');
+							canvas.height = image.naturalHeight;
+							canvas.width = image.naturalWidth;
+							context.drawImage(image, 0, 0);
+							done(canvas.toDataURL('image/jpeg'));
+						};
+						image.src = src;
+					});
+				}
+
+				let uri = await imgToDataURI('./profile.png');
+				
+				let vcard = new VCard();
+				vcard.setVersion(3);
+				vcard.setName('Pamela Mishaw');
+				vcard.setPhoto(uri);
+				vcard.setAddress('123 Main St', 'Clearwater', 'FL', '33546', 'USA', 'My House');
+				vcard.setPhone('8136160999', '', ['cell', 'video'], true);
+				vcard.setEmail('apples@gmial.com', true);
+				let text = await vcard.render();
+
+				console.log(text);
+				download(text);
+				
+
+			})();
+		</script>
+	</body>
+</html>
