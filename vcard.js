@@ -284,11 +284,11 @@ export class VCard {
 		return this;
 	}
 
-	setLogo(img) {
+	setLogo(dataURI) {
 		if(!this.dataUriRegex.test(dataURI)){
 			throw new Error("Invalid Image Data URI");
 		}
-		this.logo.push(img);
+		this.logo.push(dataURI);
 		return this;
 	}
 
