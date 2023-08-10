@@ -545,70 +545,146 @@ export class VCard {
 		return parts.join("\n");
 	}
 
-	fromText(str){
-		let kvp = [];
-		let idx = 0;
-		let current = {key: [], value: []};
-		let key = 'key';
-		let chars = [...str];
-		if(chars[chars.length-1] !== "\n") chars.push("\n");
-		let getNextChar = () => {
-			if(idx >= chars.length) return false;
-			let char = chars[idx]; idx++;
-			if(char === '\\'){
-				char += chars[idx]; idx++;
-			}else if(char === "\n" && chars[idx] === ' '){
-				idx++; // skip the space
-				char = chars[idx]; idx++;
-			}
-			return char;
-		};
-		while(true){
-			let char = getNextChar();
-			if(char === false) break;
-			if(key === 'key' && char === ':'){
-				key = 'value';
-			}else if(key === 'value' && char === "\n"){
-				kvp.push(current);
-				current = {key: [], value: []};
-				key = 'key';
-			}else{
-				current[key].push(char);
-			}
-		}
-		let kvp_tokenized = [];
-		for(let i=0; i<kvp.length; i++){
-			let {key, value} = kvp[i];
-			let key_tokens = [];
-			let value_tokens = [];
-			let curr = [];
-			for(let n = 0; n<key.length; n++){
-				if(key[n] === '\\n') curr.push("\n");
-				else if(key[n].length > 0 && key[n].substring(0,1) === '\\') curr.push(key[n].substring(1));
-				else if(key[n] === ';'){
-					key_tokens.push(curr.join(''));
-					curr = [];
-				}else curr.push(key[n]);
-			}
-			if(curr.length) key_tokens.push(curr.join(''));
-			curr = [];
-			for(let n = 0; n<value.length; n++){
-				if(value[n] === '\\n') curr.push("\n");
-				else if(value[n].length > 0 && value[n].substring(0,1) === '\\') curr.push(value[n].substring(1));
-				else if(value[n] === ';'){
-					value_tokens.push(curr.join(''));
-					curr = [];
-				}else curr.push(value[n]);
-			}
-			if(curr.length) key_tokens.push(curr.join(''));
+	tokenizeVcardString(str){
+		const unesc = str => str.replace(/\\,/g, ',')
+			.replace(/\\;/g, ';')
+			.replace(/\\:/g, ':')
+			.replace(/\\\\/g, '\\')
+			.replace(/\\n/g, "\n");
 
-			let property_key = key_tokens.shift();
-			let property_params = key_tokens;
-			let values = value_tokens;
-			kvp_tokenized.push({key:property_key, props:property_params, values});
+		let tokens = str.replace(/\n /g, '').split(/\n+/g).map(line=>{
+			var [key_props, ...values] = line.match(/(\\.|[^:])+/g);
+			values = values.join(":").match(/(\\.|[^;])+/g).map(unesc);
+
+			var [key, ...props] = key_props.match(/(\\.|[^;])+/g);
+			key = unesc(key);
+
+			props = props.map(prop=>{
+				let [property, values] = prop.match(/(\\.|[^=])+/g);
+				property = unesc(property);
+
+				values = values.match(/(\\.|[^,])+/g).map(unesc);
+				return {property, values};
+			});
+
+			return {key, props, values};
+		});
+
+		// Combine groups into single tokens
+		let label_map = {};
+		for(let i=0; i<tokens.length; i++){
+			if(tokens[i].key.indexOf(".") > -1){
+				let [label, key] = tokens[i].key.split(".");
+				if(!label_map.hasOwnProperty(label)){
+					tokens[i].key = key;
+					label_map[label] = i;
+				}else{
+					if(key === "X-ABLabel") key = "LABEL";
+					tokens[label_map[label]].props.push({
+						property: key, 
+						values: tokens[i].values
+					});
+				}
+			}
 		}
-		console.log(kvp_tokenized);
+		tokens = tokens.filter(t=>t.key.indexOf(".") === -1);
+		return tokens;
 	}
+
+	fromText(str){
+		let tokens = this.tokenizeVcardString(str);
+		
+		// Check first & last lines
+		let begin = tokens.shift();
+		if(begin.key.toUpperCase() !== "BEGIN" || !begin.values[0] || begin.values[0].toUpperCase() !== "VCARD"){
+			throw new Error("Invalid vCard");
+		}
+		let end = tokens.pop();
+		if(end.key.toUpperCase() !== "END" || !end.values[0] || end.values[0].toUpperCase() !== "VCARD"){
+			throw new Error("Invalid vCard");
+		}
+
+		let version_line = tokens.shift();
+		if(version_line.key.toUpperCase() !== "VERSION" || !version_line.values[0] || !["3.0", "4.0"].includes(version_line.values[0])){
+			throw new Error("Incompatible vCard version.");
+		}
+
+		let version = parseInt(version_line.values[0]);
+
+		for(let token_index = 0; token_index<tokens.length; token_index++){
+			let token = tokens[token_index];
+			if(!token.key || !token.values || !token.values.length){
+				throw new Error("Invalid vCard (Invalid token)");
+			}
+			switch(token.key.toUpperCase()){
+				case "N": break;
+				case "FN":
+					this.setName(token.values[0]);
+					break;
+				case "NICKNAME":
+					token.values.forEach(n=>{
+						this.setNickname(n);
+					});
+					break;
+				case "PHOTO":
+					if(version === 3){
+						let type_prop = token.props.filter(p=>p.property.toUpperCase() === "TYPE");
+						if(!type_prop.length || !type_prop[0].values || !type_prop[0].values.length){
+							throw new Error("Invalid vCard (Missing encoding)");
+						}
+						this.setPhoto(`data:image/${type_prop[0].values[0].toLowerCase()};base64,${token.values[0]}`);
+					}else{
+						this.setPhoto(token.values.join(";"));
+					}
+					break;
+				case "BDAY":
+					var [_, y, m, d, hr, mn, sec] = token.values[0]
+						.replace(/[^\d]*/g, '')
+						.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/)
+						.map(n=>+n);
+					this.setBday(new Date(Date.UTC(y, m-1, d, hr, mn, sec)));
+					break;
+				case "ANNIVERSARY":
+					var [_, y, m, d, hr, mn, sec] = token.values[0]
+						.replace(/[^\d]*/g, '')
+						.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/)
+						.map(n=>+n);
+					this.setAnniversary(new Date(Date.UTC(y, m-1, d, hr, mn, sec)));
+					break;
+				case "GENDER":
+					this.setGender(...token.values);
+					break;
+				case "ADR":
+					var label_prop = token.props.filter(p=>p.property.toUpperCase() === "LABEL");
+					var label = label_prop.length ? label_prop[0].values[0] : '';
+					this.setAddress(...token.values, label);
+					break;
+				case "TEL":
+					var phone = '', ext = '', type = [], pref = false;
+					if(version === 3){
+						phone = token.values[0].replace(/[^\d]/g, '');
+						if(phone.length === 11 && phone[0] === '1'){
+							phone = phone.substring(1)
+						}
+						var type_prop = token.props.filter(p=>p.property.toUpperCase() === "TYPE");
+						if(type_prop.length){
+							for(let n=0; n<type_prop[0].values.length; n++){
+								if(type_prop[0].values[n] === 'pref') pref = true;
+								else type.push(type_prop[0].values[n]);
+							}
+						}
+					}else{
+						console.log("parse v4 phone");
+					}
+					this.setPhone(phone, ext, type, pref);
+					break;
+					
+			}
+		}
+
+		console.log(version, tokens);
+	}
+		
 }
 
 VCard.IM_PROTOCOL_SIP = 'sip';

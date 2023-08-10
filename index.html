@@ -29,27 +29,48 @@
 							canvas.height = image.naturalHeight;
 							canvas.width = image.naturalWidth;
 							context.drawImage(image, 0, 0);
-							done(canvas.toDataURL('image/jpeg'));
+							done(canvas.toDataURL('image/png'));
 						};
 						image.src = src;
 					});
 				}
 
-				
+				//console.log(await imgToDataURI('./profile.png'))
+
+				let text = await new VCard()
+					.setVersion(3)
+					.setName('Pamela Mishaw')
+					.setNickname('Moon')
+					.setPhoto(await imgToDataURI('./profile.png'))
+					.setPhone('8136160999', '', ['cell', 'video'], true)
+					.setEmail('apples@gmial.com', true)
+					.setBday(new Date(1989, 0, 17))
+					.setAddress('123 main st', 'Clearwater', 'FL', '33584', 'USA', 'My House, in the middle of my street')
+					.setTitle('Super babe')
+					.setRole('Corn cleaner')
+					.setLogo(await imgToDataURI('./logo.png'))
+					.setOrg('Rob co, inc', 'Fart division', 'Butts department')
+					.setNote(`Woah, black betty; pambalam..`)
+					.setURL('http://www.google.com')
+					.render();
+
 				// let text = await new VCard()
-				// 	.setVersion(3)
-				// 	.setName('Pamela Mishaw')
-				// 	.setNickname('Moon')
+				// 	.setVersion(4)
+				// 	.setKind(VCard.KIND_IND)
+				// 	.setName('Pamela Mish,aw')
+				// 	.setNickname('Mo:on')
+				// 	.setGender(VCard.GENDER_MAL, "Funky ;Chicken")
 				// 	.setPhoto(await imgToDataURI('./profile.png'))
-				// 	.setPhone('8136160999', '', ['cell', 'video'], true)
+				// 	.setPhone('8136160999', '123', ['cell', 'video'], true)
 				// 	.setEmail('apples@gmial.com', true)
 				// 	.setBday(new Date(1989, 0, 17))
 				// 	.setAnniversary(new Date(1996, 7, 28))
-				// 	.setAddress('123 main st', 'Clearwater', 'FL', '33584', 'USA', 'My House, in the middle of my street')
-				// 	.setTitle('Super babe')
-				// 	.setRole('Corn cleaner')
+				// 	.setAddress('123 main st', 'Clearwater', 'FL', '33584', 'USA', 'My House, in t;he middle of my street')
+				// 	.setIM('rob@out.com', VCard.IM_PROTOCOL_SIP, true)
+				// 	.setTitle('Super b;abe')
+				// 	.setRole('Corn c:leaner')
 				// 	.setLogo(await imgToDataURI('./logo.png'))
-				// 	.setOrg('Rob co, inc', 'Fart division', 'Butts department')
+				// 	.setOrg('Rob co, inc', 'Fart di;vision', 'Butts depar\'tment')
 				// 	.setNote(`Woah, black betty; pambalam..`)
 				// 	.setURL('http://www.google.com')
 				// 	.render();
@@ -58,10 +79,6 @@
 				//download(text);
 
 				let vcard = new VCard();
-				let text = `key:value
-key2;prop=1:value2
-key3;prop2=asd;prop3=wer:value;value;value`;
- console.log(text);
 				vcard.fromText(text);
 				
 
