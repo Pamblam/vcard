@@ -110,7 +110,6 @@ export class VCard {
 		}else{
 			return `${y}-${m}-${d}T${h}:${min}:${sec}Z`;
 		}
-		
 	}
 
 	setVersion(version){
@@ -118,6 +117,7 @@ export class VCard {
 			throw new Error('Unsupported version: '+version);
 		}
 		this.specVersion = version;
+		return this;
 	}
 
 	setNickname(nickname) {
@@ -543,6 +543,71 @@ export class VCard {
 		parts.push('END:VCARD');
 
 		return parts.join("\n");
+	}
+
+	fromText(str){
+		let kvp = [];
+		let idx = 0;
+		let current = {key: [], value: []};
+		let key = 'key';
+		let chars = [...str];
+		if(chars[chars.length-1] !== "\n") chars.push("\n");
+		let getNextChar = () => {
+			if(idx >= chars.length) return false;
+			let char = chars[idx]; idx++;
+			if(char === '\\'){
+				char += chars[idx]; idx++;
+			}else if(char === "\n" && chars[idx] === ' '){
+				idx++; // skip the space
+				char = chars[idx]; idx++;
+			}
+			return char;
+		};
+		while(true){
+			let char = getNextChar();
+			if(char === false) break;
+			if(key === 'key' && char === ':'){
+				key = 'value';
+			}else if(key === 'value' && char === "\n"){
+				kvp.push(current);
+				current = {key: [], value: []};
+				key = 'key';
+			}else{
+				current[key].push(char);
+			}
+		}
+		let kvp_tokenized = [];
+		for(let i=0; i<kvp.length; i++){
+			let {key, value} = kvp[i];
+			let key_tokens = [];
+			let value_tokens = [];
+			let curr = [];
+			for(let n = 0; n<key.length; n++){
+				if(key[n] === '\\n') curr.push("\n");
+				else if(key[n].length > 0 && key[n].substring(0,1) === '\\') curr.push(key[n].substring(1));
+				else if(key[n] === ';'){
+					key_tokens.push(curr.join(''));
+					curr = [];
+				}else curr.push(key[n]);
+			}
+			if(curr.length) key_tokens.push(curr.join(''));
+			curr = [];
+			for(let n = 0; n<value.length; n++){
+				if(value[n] === '\\n') curr.push("\n");
+				else if(value[n].length > 0 && value[n].substring(0,1) === '\\') curr.push(value[n].substring(1));
+				else if(value[n] === ';'){
+					value_tokens.push(curr.join(''));
+					curr = [];
+				}else curr.push(value[n]);
+			}
+			if(curr.length) key_tokens.push(curr.join(''));
+
+			let property_key = key_tokens.shift();
+			let property_params = key_tokens;
+			let values = value_tokens;
+			kvp_tokenized.push({key:property_key, props:property_params, values});
+		}
+		console.log(kvp_tokenized);
 	}
 }
 

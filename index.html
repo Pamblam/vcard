@@ -35,19 +35,34 @@
 					});
 				}
 
-				let uri = await imgToDataURI('./profile.png');
 				
-				let vcard = new VCard();
-				vcard.setVersion(3);
-				vcard.setName('Pamela Mishaw');
-				vcard.setPhoto(uri);
-				vcard.setAddress('123 Main St', 'Clearwater', 'FL', '33546', 'USA', 'My House');
-				vcard.setPhone('8136160999', '', ['cell', 'video'], true);
-				vcard.setEmail('apples@gmial.com', true);
-				let text = await vcard.render();
+				// let text = await new VCard()
+				// 	.setVersion(3)
+				// 	.setName('Pamela Mishaw')
+				// 	.setNickname('Moon')
+				// 	.setPhoto(await imgToDataURI('./profile.png'))
+				// 	.setPhone('8136160999', '', ['cell', 'video'], true)
+				// 	.setEmail('apples@gmial.com', true)
+				// 	.setBday(new Date(1989, 0, 17))
+				// 	.setAnniversary(new Date(1996, 7, 28))
+				// 	.setAddress('123 main st', 'Clearwater', 'FL', '33584', 'USA', 'My House, in the middle of my street')
+				// 	.setTitle('Super babe')
+				// 	.setRole('Corn cleaner')
+				// 	.setLogo(await imgToDataURI('./logo.png'))
+				// 	.setOrg('Rob co, inc', 'Fart division', 'Butts department')
+				// 	.setNote(`Woah, black betty; pambalam..`)
+				// 	.setURL('http://www.google.com')
+				// 	.render();
 
-				console.log(text);
-				download(text);
+				// console.log(text);
+				//download(text);
+
+				let vcard = new VCard();
+				let text = `key:value
+key2;prop=1:value2
+key3;prop2=asd;prop3=wer:value;value;value`;
+ console.log(text);
+				vcard.fromText(text);
 				
 
 			})();
