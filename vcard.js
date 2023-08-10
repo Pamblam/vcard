@@ -661,11 +661,11 @@ export class VCard {
 					break;
 				case "TEL":
 					var phone = '', ext = '', type = [], pref = false;
+					phone = token.values[0].replace(/[^\d]/g, '');
+					if(phone.length === 11 && phone[0] === '1'){
+						phone = phone.substring(1)
+					}
 					if(version === 3){
-						phone = token.values[0].replace(/[^\d]/g, '');
-						if(phone.length === 11 && phone[0] === '1'){
-							phone = phone.substring(1)
-						}
 						var type_prop = token.props.filter(p=>p.property.toUpperCase() === "TYPE");
 						if(type_prop.length){
 							for(let n=0; n<type_prop[0].values.length; n++){
@@ -674,7 +674,11 @@ export class VCard {
 							}
 						}
 					}else{
-						console.log("parse v4 phone");
+						var type_prop = token.props.filter(p=>p.property.toUpperCase() === "TYPE");
+						if(type_prop.length) type = type_prop[0].values;
+						var pref_prop = token.props.filter(p=>p.property.toUpperCase() === "PREF");
+						if(pref_prop.length) pref = true;
+						if(token.values.length > 1) ext = token.values[1].replace(/[^\d]/g, '');
 					}
 					this.setPhone(phone, ext, type, pref);
 					break;
