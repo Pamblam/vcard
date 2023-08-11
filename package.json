@@ -1,12 +1,25 @@
 {
-  "name": "vcard",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+	"name": "ez-vcard",
+	"version": "1.0.0",
+	"description": "Create and parse vCard files in version 3 or 4.",
+	"scripts": {
+		"test": "nyc --reporter=html --reporter=text mocha",
+		"build": "webpack"
+	},
+	"keywords": [
+		"vcard",
+		"vcf",
+		"contact",
+		"vcard3",
+		"vcard4"
+	],
+	"author": "Robert Parham",
+	"license": "MIT",
+	"devDependencies": {
+		"mime-types": "^2.1.35",
+		"mocha": "^10.2.0",
+		"nyc": "^15.1.0",
+		"webpack": "^5.88.2",
+		"webpack-cli": "^5.1.4"
+	}
 }
